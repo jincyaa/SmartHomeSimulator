@@ -1,0 +1,8 @@
+---
+alwaysApply: false
+description: Update the README.md file with changes. 
+Use .cursor\instructions.txt to keep overall project setup details and requirements.
+Make minimal changes necessary for implementing new requirements.
+Verify changes and check for any potential errors. 
+Monitor linter and terminal errors and fix them.
+---

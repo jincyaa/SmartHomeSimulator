@@ -1,0 +1,6 @@
+Build ASP.NET Core Web API + React app simulating:
+1) Light ON at night (18:00–06:00) when motion random-detected, OFF after 2 simulated mins.
+2) Thermostat keeps 22°C ±0.5°C, drifts to 20°C when off.
+Sim time starts 17:50, +1 sim min/sec.
+GET /api/state returns: sim time, light status, countdown, temp, heating, events.
+React polls every second and displays data simply.

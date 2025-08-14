@@ -1,4 +1,6 @@
 using SmartHome.API.Models;
+using Microsoft.AspNetCore.SignalR;
+using SmartHome.API.Hubs;
 using System.Timers;
 
 namespace SmartHome.API.Services;
@@ -7,13 +9,16 @@ public class SmartHomeSimulationService : IDisposable
 {
     private readonly System.Timers.Timer _simulationTimer;
     private readonly Random _random = new Random();
+    private readonly IHubContext<SmartHomeHub> _hubContext;
     
     private SmartHomeState _currentState;
     private DateTime _lastUpdate;
     private readonly object _lockObject = new object();
 
-    public SmartHomeSimulationService()
+    public SmartHomeSimulationService(IHubContext<SmartHomeHub> hubContext)
     {
+        _hubContext = hubContext;
+        
         // Initialize simulation at 17:50
         var today = DateTime.Today;
         _currentState = new SmartHomeState
@@ -34,7 +39,7 @@ public class SmartHomeSimulationService : IDisposable
         _simulationTimer.Start();
     }
 
-    private void OnSimulationTick(object? sender, ElapsedEventArgs e)
+    private async void OnSimulationTick(object? sender, ElapsedEventArgs e)
     {
         lock (_lockObject)
         {
@@ -61,6 +66,19 @@ public class SmartHomeSimulationService : IDisposable
             UpdateTemperature();
 
             _lastUpdate = DateTime.UtcNow;
+        }
+
+        // Broadcast the updated state to all connected clients
+        try
+        {
+            Console.WriteLine($"Broadcasting update - Light: {_currentState.LightOn}, Countdown: {_currentState.LightCountdown}, Temp: {_currentState.Temperature:F1}°C");
+            await _hubContext.Clients.All.SendAsync("ReceiveSmartHomeUpdate", _currentState);
+            Console.WriteLine("Broadcast successful");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error broadcasting update: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
     }
 

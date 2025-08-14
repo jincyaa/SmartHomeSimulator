@@ -1,6 +1,6 @@
 # Smart Home Dashboard
 
-A real-time smart home monitoring system built with ASP.NET Core Web API and React, featuring automatic lighting and thermostat control simulation.
+A real-time smart home monitoring system built with ASP.NET Core Web API and React, featuring automatic lighting and thermostat control simulation with real-time updates via SignalR.
 
 ## Features
 
@@ -8,14 +8,14 @@ A real-time smart home monitoring system built with ASP.NET Core Web API and Rea
 - **Smart Thermostat**: Maintains 22°C ±0.5°C, drifts to 20°C when heating is off
 - **Real-time Simulation**: Simulation time advances 1 minute per second, starting at 17:50
 - **Event Logging**: Tracks all system events (light changes, motion detection, heating cycles)
-- **Responsive Dashboard**: Beautiful React frontend that polls the API every second
+- **Real-time Dashboard**: Beautiful React frontend with instant updates via SignalR
 
 ## Architecture
 
-- **Backend**: ASP.NET Core 8.0 Web API with CORS enabled
+- **Backend**: ASP.NET Core 8.0 Web API with SignalR hub and CORS enabled
 - **Frontend**: React 18 with modern CSS styling
-- **Communication**: RESTful API with real-time polling
-- **Simulation**: Background service with timer-based updates
+- **Communication**: SignalR real-time hub + RESTful API for initial state
+- **Simulation**: Background service with timer-based updates broadcasted via SignalR
 
 ## Prerequisites
 
@@ -55,7 +55,7 @@ The React app will start on `http://localhost:3000`.
 
 ### GET /api/smarthome/state
 
-Returns the current state of the smart home system:
+Returns the current state of the smart home system (used for initial state):
 
 ```json
 {
@@ -73,6 +73,13 @@ Returns the current state of the smart home system:
   ]
 }
 ```
+
+### SignalR Hub: /smartHomeHub
+
+Real-time updates are sent via SignalR hub:
+- **Event**: `ReceiveSmartHomeUpdate`
+- **Frequency**: Every simulated minute (every real second)
+- **Data**: Complete SmartHomeState object
 
 ## Simulation Logic
 
@@ -102,6 +109,7 @@ SmartHome/
 ├── SmartHome.sln                 # Solution file
 ├── SmartHome.API/                # ASP.NET Core Web API
 │   ├── Controllers/              # API controllers
+│   ├── Hubs/                     # SignalR hubs
 │   ├── Models/                   # Data models
 │   ├── Services/                 # Business logic services
 │   ├── Program.cs                # Application entry point
@@ -120,11 +128,13 @@ SmartHome/
 - The simulation service runs as a singleton background service
 - All state updates are thread-safe using locks
 - Events are automatically trimmed to prevent memory issues
+- SignalR hub broadcasts updates to all connected clients in real-time
 
 ### Frontend Development
 - Modern React hooks (useState, useEffect)
 - Responsive CSS Grid layout
-- Real-time updates every second
+- Real-time updates via SignalR connection
+- Automatic reconnection handling
 - Error handling and loading states
 
 ## Troubleshooting

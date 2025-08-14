@@ -1,4 +1,5 @@
 using SmartHome.API.Services;
+using SmartHome.API.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,6 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
+// Add SignalR
+builder.Services.AddSignalR();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -20,7 +24,7 @@ builder.Services.AddCors(options =>
         });
 });
 
-// Add singleton services
+// Add singleton services AFTER SignalR is configured
 builder.Services.AddSingleton<SmartHomeSimulationService>();
 
 var app = builder.Build();
@@ -36,5 +40,8 @@ app.UseHttpsRedirection();
 app.UseCors("AllowReactApp");
 app.UseAuthorization();
 app.MapControllers();
+
+// Map SignalR hub
+app.MapHub<SmartHomeHub>("/smartHomeHub");
 
 app.Run();

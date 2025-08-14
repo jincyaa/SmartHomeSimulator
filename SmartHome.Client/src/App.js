@@ -1,50 +1,80 @@
 import React, { useState, useEffect } from 'react';
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 import './App.css';
 
 function App() {
   const [state, setState] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [apiUrl, setApiUrl] = useState('/api/smarthome/state');
+  const [connection, setConnection] = useState(null);
 
   useEffect(() => {
-    const fetchState = async () => {
+    const createConnection = async () => {
       try {
-        console.log('Fetching from API...');
-        const response = await fetch('/api/smarthome/state', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+        const newConnection = new HubConnectionBuilder()
+          .withUrl('https://localhost:7001/smartHomeHub')
+          .configureLogging(LogLevel.Debug)
+          .withAutomaticReconnect()
+          .build();
+
+        // Set up event handlers
+        newConnection.on('ReceiveSmartHomeUpdate', (data) => {
+          console.log('Received update via SignalR:', data);
+          console.log('Light status:', data.lightOn, 'Countdown:', data.lightCountdown);
+          setState(data);
+          setError(null);
         });
+
+        // Handle connection events
+        newConnection.onclose((error) => {
+          console.log('SignalR connection closed:', error);
+          setError('Connection lost. Attempting to reconnect...');
+        });
+
+        newConnection.onreconnecting((error) => {
+          console.log('SignalR reconnecting:', error);
+          setError('Reconnecting...');
+        });
+
+        newConnection.onreconnected((connectionId) => {
+          console.log('SignalR reconnected:', connectionId);
+          setError(null);
+        });
+
+        // Start the connection
+        await newConnection.start();
+        console.log('SignalR connection established');
+        setConnection(newConnection);
+        setError(null);
         
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
+        // Get initial state
+        try {
+          const response = await fetch('https://localhost:7001/api/smarthome/state');
+          if (response.ok) {
+            const data = await response.json();
+            setState(data);
+          }
+        } catch (err) {
+          console.log('Could not fetch initial state, will wait for SignalR updates');
         }
         
-        const data = await response.json();
-        console.log('Received data:', data);
-        setState(data);
-        setError(null);
+        setLoading(false);
       } catch (err) {
-        console.error('Fetch error:', err);
+        console.error('SignalR connection error:', err);
         setError(`Connection error: ${err.message}. Make sure the API is running on https://localhost:7001`);
-      } finally {
         setLoading(false);
       }
     };
 
-    // Initial fetch
-    fetchState();
+    createConnection();
 
-    // Poll every second
-    const interval = setInterval(fetchState, 1000);
-
-    return () => clearInterval(interval);
-  }, []);
+    // Cleanup on unmount
+    return () => {
+      if (connection) {
+        connection.stop();
+      }
+    };
+  }, [connection]);
 
   if (loading) {
     return (
@@ -104,6 +134,9 @@ function App() {
         <p className="simulation-time">
           Simulation Time: {formatTime(state.simulationTime)}
         </p>
+        <div className={`connection-status ${connection ? 'connected' : 'disconnected'}`}>
+          SignalR: {connection ? '🟢 Connected' : '🔴 Disconnected'}
+        </div>
       </header>
 
       <main className="dashboard">
